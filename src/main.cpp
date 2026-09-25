@@ -1134,6 +1134,7 @@ void usage(FILE* out) {
                  "  share list                    list the receivers on the network and their folders.\n"
                  "  share send                    same as 'share list'.\n"
                  "\n"
+                 "'s', 'r' and 'l' are shortcuts for 'send', 'recv' and 'list'.\n"
                  "<name> can also be name@host, or the receiver's IP address.\n"
                  "Ports: UDP %u (discovery), TCP %u (transfer).\n",
                  kVersion, kDiscoveryPort, kPreferredTcpPort);
@@ -1154,15 +1155,15 @@ int main(int argc, char** argv) {
             std::printf("share %s\n", kVersion);
             return 0;
         }
-        if (args[0] == "recv" || args[0] == "receive") {
+        if (args[0] == "recv" || args[0] == "receive" || args[0] == "r") {
             if (args.size() > 2) { usage(stderr); return 2; }
             return cmd_recv(args.size() == 2 ? std::optional<std::string>(args[1]) : std::nullopt);
         }
-        if (args[0] == "list" || args[0] == "ls") {
+        if (args[0] == "list" || args[0] == "ls" || args[0] == "l") {
             if (args.size() > 1) { usage(stderr); return 2; }
             return cmd_list();
         }
-        if (args[0] == "send") {
+        if (args[0] == "send" || args[0] == "s") {
             if (args.size() == 1) return cmd_list();
             if (args.size() == 2) {
                 std::fprintf(stderr, "Missing the files to send: share send %s <path>...\n", args[1].c_str());

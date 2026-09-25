@@ -22,6 +22,8 @@ share list                    list the receivers on the network and their folder
 share send                    same as 'share list'.
 ```
 
+- `share s`, `share r` and `share l` are shortcuts for `share send`, `share recv` and `share list`.
+
 - Names are case-insensitive. If two receivers share a name, use `name@host` (IP or hostname).
 - `share send 192.168.1.20 file` also works when broadcast is blocked on the network.
 - Existing files are never overwritten: `a.txt` becomes `a (1).txt`, `dir` becomes `dir (1)`.
