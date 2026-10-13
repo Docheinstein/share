@@ -1,0 +1,85 @@
+#include "discover.h"
+
+#include <arpa/inet.h>
+#include <chrono>
+#include <cstring>
+#include <ranges>
+#include <sys/socket.h>
+#include <unordered_map>
+
+#include "constants.h"
+#include "sockutils.h"
+
+static uint64_t compute_receiver_uid(const in_addr addr, const in_port_t port) {
+    return static_cast<uint64_t>(addr.s_addr) << 32 | port;
+}
+
+std::vector<DiscoveredReceiver>
+broadcast_discovery_request(const uint32_t num_attempts, const uint32_t delay_between_attempts_ms,
+                            const std::function<bool(const DiscoveredReceiver&)>& on_receiver_found) {
+
+    // Create a UDP broadcasting socket.
+    const int udp_socket = socket_create_udp();
+    socket_set_option(udp_socket, SO_BROADCAST, 1);
+
+    const sockaddr_in udp_socket_addr = socket_create_addr(INADDR_BROADCAST, htons(SHARE_UDP_PORT));
+
+    std::vector<char> buffer {};
+    buffer.resize(DISCOVERY_RESPONSE_MAX_SIZE);
+
+    std::unordered_map<uint64_t, DiscoveredReceiver> discovered_receivers {};
+
+    const auto delay_ms = std::chrono::milliseconds(delay_between_attempts_ms);
+
+    for (uint32_t attempt = 0; attempt < num_attempts; ++attempt) {
+        const auto deadline = std::chrono::steady_clock::now() + delay_ms;
+
+        // Send discovery packet.
+        socket_send_from(udp_socket, DISCOVERY_REQUEST_DATA, sizeof(DISCOVERY_REQUEST_DATA), &udp_socket_addr);
+
+        while (true) {
+            const auto now = std::chrono::steady_clock::now();
+            if (now > deadline) {
+                break;
+            }
+
+            int left_ms =
+                static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now).count());
+
+            const bool any_answer = socket_wait_until(udp_socket, left_ms);
+
+            if (any_answer) {
+                // Someone answered to the discovery.
+                sockaddr_in discovery_response_addr {};
+                socket_recv_from(udp_socket, buffer.data(), buffer.size(), &discovery_response_addr);
+
+                const in_addr discovered_addr = discovery_response_addr.sin_addr;
+
+                in_port_t discovered_port;
+                memcpy(&discovered_port, buffer.data(), 2);
+
+                uint16_t share_name_size_network_order;
+                memcpy(&share_name_size_network_order, buffer.data() + 2, 2);
+
+                const uint16_t share_name_size = ntohs(share_name_size_network_order);
+
+                const uint64_t receiver_uid = compute_receiver_uid(discovered_addr, discovered_port);
+                if (!discovered_receivers.contains(receiver_uid)) {
+                    // Add a new receiver to the list.
+                    std::string share_name {buffer.data() + 4, share_name_size};
+                    DiscoveredReceiver receiver {.addr = discovery_response_addr.sin_addr.s_addr, //
+                                                 .port = discovered_port,                         //
+                                                 .name = std::move(share_name)};
+                    discovered_receivers.emplace(receiver_uid, receiver);
+
+                    if (!on_receiver_found(receiver)) {
+                        // Abort discovery.
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    return discovered_receivers | std::views::values | std::ranges::to<std::vector>();
+}

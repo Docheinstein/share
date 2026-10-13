@@ -1,7 +1,25 @@
 add_executable(share)
 
 target_sources(share PUBLIC
+    addrutils.h
+    addrutils.cpp
+    common.h
+    constants.h
+    discover.h
+    discover.cpp
+    list.cpp
+    list.h
     main.cpp
+    pathutils.h
+    pathutils.cpp
+    progress.h
+    progress.cpp
+    recv.cpp
+    recv.h
+    send.cpp
+    send.h
+    sockutils.h
+    sockutils.cpp
 )
 
 target_include_directories(share PUBLIC .)
