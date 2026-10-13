@@ -93,10 +93,10 @@ void send_path(int socket, const std::filesystem::path& path, const std::filesys
                     socket_send(socket, buffer.data(), read_result);
                 }
             } while (read_result && bytes_read_so_far != file_size);
-
-            // Close file.
-            fclose(f);
         }
+
+        // Close file.
+        fclose(f);
 
         finish_progress(progress);
     }
@@ -156,7 +156,7 @@ std::pair<in_addr_t, in_port_t> resolver_receiver_identifier(const std::string& 
         const std::string receiver_address_str = receiver_address_and_port.substr(0, colon);
         const std::string receiver_port_str = receiver_address_and_port.substr(colon + 1);
 
-        return {str_to_addr(receiver_address_str), str_to_addr(receiver_port_str)};
+        return {str_to_addr(receiver_address_str), str_to_port(receiver_port_str)};
     }
 
     // A discover request is needed to resolver the receiver identifier.

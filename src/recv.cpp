@@ -138,14 +138,12 @@ void command_recv(int argc, char** argv) {
 
                 if (!socket_recv_all(tcp_sender_socket, &transfer_type, 1)) {
                     printf("Connection closed by remote peer\n");
-                    close(tcp_sender_socket);
                     break;
                 }
 
                 if (transfer_type == TRANSFER_TYPE_END) {
                     // End of stream: send ACK.
                     socket_send(tcp_sender_socket, &TRANSFER_TYPE_END_ACK, 1);
-                    close(tcp_sender_socket);
                     break;
                 }
 
@@ -205,7 +203,7 @@ void command_recv(int argc, char** argv) {
                     do {
                         const size_t bytes_to_read = std::min(buffer.size(), file_size - bytes_received_so_far);
 
-                        ssize_t read_result = socket_recv(tcp_sender_socket, buffer.data(), bytes_to_read);
+                        size_t read_result = socket_recv(tcp_sender_socket, buffer.data(), bytes_to_read);
                         if (read_result == 0) {
                             connection_closed = true;
                             break;

@@ -6,7 +6,7 @@
 #include <string>
 
 in_addr_t str_to_addr(const std::string& addr_str);
-in_port_t str_to_port(const std::string& addr_str);
+in_port_t str_to_port(const std::string& port_str);
 
 std::string addr_to_str(in_addr addr);
 std::string port_to_str(in_port_t port);
