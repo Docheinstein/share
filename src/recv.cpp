@@ -1,15 +1,11 @@
 #include "recv.h"
 
 #include <algorithm>
-#include <arpa/inet.h>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
-#include <netinet/in.h>
 #include <string>
-#include <sys/socket.h>
-#include <unistd.h>
 #include <vector>
 
 #include "addrutils.h"
@@ -28,22 +24,22 @@ bool is_valid_discovery_request(const void* const data, const size_t size) {
 void command_recv(int argc, char** argv) {
     // share recv [<name>]
     // If <name> is not given, the name of the current directory is used as share name.
-    const std::string share_name = argc ? argv[0] : std::filesystem::current_path().filename().string();
+    const std::string share_name = argc ? argv[0] : path_to_utf8(std::filesystem::current_path().filename());
     if (share_name.size() > SHARE_NAME_MAX_LENGTH) {
         fprintf(stderr, "Share name is too long: %zu > %u\n", share_name.size(), SHARE_NAME_MAX_LENGTH);
         return;
     }
 
     // Create UDP socket (for discovery response).
-    const int udp_socket = socket_create_udp();
+    const socket_t udp_socket = socket_create_udp();
     socket_set_option(udp_socket, SO_REUSEADDR, 1);
 
     const sockaddr_in udp_socket_address = socket_create_addr(INADDR_ANY, htons(SHARE_UDP_PORT));
     socket_bind(udp_socket, udp_socket_address);
 
     // Create TCP socket.
-    const int tcp_socket = socket_create_tcp();
-    socket_set_option(tcp_socket, SO_REUSEADDR, 1);
+    const socket_t tcp_socket = socket_create_tcp();
+    socket_set_reuse_addr_exclusive(tcp_socket);
 
     // Pick the first available port.
     uint16_t tcp_port = SHARE_TCP_MIN_PORT - 1;
@@ -66,7 +62,7 @@ void command_recv(int argc, char** argv) {
     printf("Receiving as '%s' into %s.\n"
            "Send a file with: share send %s <file>...\n"
            "Press Ctrl-C to stop.\n",
-           share_name.c_str(), std::filesystem::current_path().string().c_str(), share_name.c_str());
+           share_name.c_str(), path_to_utf8(std::filesystem::current_path()).c_str(), share_name.c_str());
 
     while (true) {
         const int num_events = socket_poll(poll_fds, POLL_NUM_SOCEKTS);
@@ -122,7 +118,7 @@ void command_recv(int argc, char** argv) {
              * +-------------------------------------------------------------------------------------------------------+
              */
             sockaddr_in tcp_sender_socket_addr {};
-            const int tcp_sender_socket = socket_accept(tcp_socket, &tcp_sender_socket_addr);
+            const socket_t tcp_sender_socket = socket_accept(tcp_socket, &tcp_sender_socket_addr);
 
             printf("\nTransfer with %s:%s has started.\n\n", addr_to_str(tcp_sender_socket_addr.sin_addr).c_str(),
                    port_to_str(tcp_sender_socket_addr.sin_port).c_str());
@@ -166,10 +162,11 @@ void command_recv(int argc, char** argv) {
                 }
 
                 // Ensure the resulting path is under the current path,
-                const std::filesystem::path local_file_path = std::filesystem::current_path() / file_path;
+                const std::filesystem::path local_file_path =
+                    std::filesystem::current_path() / path_from_utf8(file_path);
 
                 if (!is_path_under(local_file_path, std::filesystem::current_path())) {
-                    printf("Path is not under current path: %s\n", local_file_path.string().c_str());
+                    printf("Path is not under current path: %s\n", path_to_utf8(local_file_path).c_str());
                     break;
                 }
 
@@ -189,7 +186,7 @@ void command_recv(int argc, char** argv) {
                 const uint64_t file_size = ntohll(file_size_network_order);
 
                 // Transfer of file: open the file for writing.
-                FILE* const f = fopen(local_file_path.c_str(), "w+");
+                FILE* const f = file_open(local_file_path, "wb");
                 if (!f) {
                     perror("fopen");
                     break;
@@ -203,7 +200,7 @@ void command_recv(int argc, char** argv) {
                     do {
                         const size_t bytes_to_read = std::min(buffer.size(), file_size - bytes_received_so_far);
 
-                        size_t read_result = socket_recv(tcp_sender_socket, buffer.data(), bytes_to_read);
+                        const size_t read_result = socket_recv(tcp_sender_socket, buffer.data(), bytes_to_read);
                         if (read_result == 0) {
                             connection_closed = true;
                             break;
@@ -225,10 +222,10 @@ void command_recv(int argc, char** argv) {
             printf("\nTransfer with %s:%s has closed.\n", addr_to_str(tcp_sender_socket_addr.sin_addr).c_str(),
                    port_to_str(tcp_sender_socket_addr.sin_port).c_str());
 
-            close(tcp_sender_socket);
+            socket_close(tcp_sender_socket);
         }
     }
 
-    close(udp_socket);
-    close(tcp_socket);
+    socket_close(udp_socket);
+    socket_close(tcp_socket);
 }

@@ -3,10 +3,13 @@
 
 #include "common.h"
 #include "list.h"
+#include "platform.h"
 #include "recv.h"
 #include "send.h"
 
 int main(int argc, char** argv) {
+    platform_init(argc, argv);
+
     if (argc < 2) {
         print_usage();
         return 0;

@@ -1,10 +1,8 @@
 #include "discover.h"
 
-#include <arpa/inet.h>
 #include <chrono>
 #include <cstring>
 #include <ranges>
-#include <sys/socket.h>
 #include <unordered_map>
 
 #include "constants.h"
@@ -30,7 +28,7 @@ broadcast_discovery_request(const uint32_t num_attempts, const uint32_t delay_be
                             const std::function<bool(const DiscoveredReceiver&)>& on_receiver_found) {
 
     // Create a UDP broadcasting socket.
-    const int udp_socket = socket_create_udp();
+    const socket_t udp_socket = socket_create_udp();
     socket_set_option(udp_socket, SO_BROADCAST, 1);
 
     const sockaddr_in udp_socket_addr = socket_create_addr(INADDR_BROADCAST, htons(SHARE_UDP_PORT));

@@ -3,9 +3,10 @@
 
 #include <cstdint>
 #include <functional>
-#include <netinet/in.h>
 #include <string>
 #include <vector>
+
+#include "net.h"
 
 struct DiscoveredReceiver {
     in_addr_t addr;

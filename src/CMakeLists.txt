@@ -10,8 +10,11 @@ target_sources(share PUBLIC
     list.cpp
     list.h
     main.cpp
+    net.h
     pathutils.h
     pathutils.cpp
+    platform.h
+    platform.cpp
     progress.h
     progress.cpp
     recv.cpp
@@ -29,6 +32,7 @@ if (WIN32)
     target_link_libraries(share PRIVATE ws2_32 iphlpapi shell32)
 endif()
 if (MSVC)
+    target_compile_definitions(share PRIVATE _CRT_SECURE_NO_WARNINGS _WINSOCK_DEPRECATED_NO_WARNINGS)
     target_compile_options(share PRIVATE /utf-8)
 endif()
 if (MINGW)

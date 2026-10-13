@@ -1,6 +1,5 @@
 #include "addrutils.h"
 
-#include <arpa/inet.h>
 #include <bit>
 #include <charconv>
 #include <cstdio>
@@ -36,6 +35,12 @@ std::string addr_to_str(const in_addr addr) {
     }
 
     return addr_str;
+}
+
+std::string addr_to_str(const in_addr_t addr) {
+    in_addr in {};
+    in.s_addr = addr;
+    return addr_to_str(in);
 }
 
 std::string port_to_str(const in_port_t port) {

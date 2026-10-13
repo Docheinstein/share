@@ -5,9 +5,15 @@
 #include <cstdint>
 #include <cstdio>
 #include <string>
+#include <utility>
+
+#ifdef _WIN32
+#include <io.h>
+#include <windows.h>
+#else
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include <utility>
+#endif
 
 #include "constants.h"
 
@@ -22,12 +28,28 @@ constexpr char PROGRESS_CHAR = '#';
 constexpr char CLEAR_LINE[] = "\r\x1b[K";
 
 uint32_t get_term_cols() {
+#ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO csbi {};
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+        // Leave the last column empty, or the console wraps the line when it gets full.
+        return csbi.srWindow.Right - csbi.srWindow.Left;
+    }
+#else
     winsize ws {};
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0) {
         return ws.ws_col;
     }
+#endif
 
     return DEFAULT_TERM_COLS;
+}
+
+bool is_stdout_terminal() {
+#ifdef _WIN32
+    return _isatty(_fileno(stdout));
+#else
+    return isatty(STDOUT_FILENO);
+#endif
 }
 
 std::string size_to_human_string(const size_t bytes) {
@@ -186,7 +208,7 @@ Progress init_progress(std::string file_name, const size_t file_size) {
     pr.last_speed_update_transferred_bytes = 0;
     pr.current_speed_update_time = pr.start_time;
     pr.current_speed_update_transferred_bytes = 0;
-    pr.is_terminal = isatty(STDOUT_FILENO);
+    pr.is_terminal = is_stdout_terminal();
     return pr;
 }
 
