@@ -34,7 +34,8 @@ void command_recv(int argc, char** argv) {
     const socket_t udp_socket = socket_create_udp();
     socket_set_option(udp_socket, SO_REUSEADDR, 1);
 
-    const sockaddr_in udp_socket_address = socket_create_addr(INADDR_ANY, htons(SHARE_UDP_PORT));
+    const sockaddr_in udp_socket_address =
+        socket_create_sockaddr(socket_create_addr(htonl(INADDR_ANY)), htons(SHARE_UDP_PORT));
     socket_bind(udp_socket, udp_socket_address);
 
     // Create TCP socket.
@@ -45,7 +46,8 @@ void command_recv(int argc, char** argv) {
     uint16_t tcp_port = SHARE_TCP_MIN_PORT - 1;
     bool tcp_socket_bound = false;
     do {
-        tcp_socket_bound = socket_try_bind(tcp_socket, socket_create_addr(INADDR_ANY, htons(++tcp_port)));
+        tcp_socket_bound = socket_try_bind(
+            tcp_socket, socket_create_sockaddr(socket_create_addr(htonl(INADDR_ANY)), htons(++tcp_port)));
     } while (tcp_port <= SHARE_TCP_MAX_PORT && !tcp_socket_bound);
 
     socket_listen(tcp_socket);

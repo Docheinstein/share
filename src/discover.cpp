@@ -31,7 +31,8 @@ broadcast_discovery_request(const uint32_t num_attempts, const uint32_t delay_be
     const socket_t udp_socket = socket_create_udp();
     socket_set_option(udp_socket, SO_BROADCAST, 1);
 
-    const sockaddr_in udp_socket_addr = socket_create_addr(INADDR_BROADCAST, htons(SHARE_UDP_PORT));
+    const sockaddr_in udp_socket_addr =
+        socket_create_sockaddr(socket_create_addr(htonl(INADDR_BROADCAST)), htons(SHARE_UDP_PORT));
 
     std::vector<char> buffer {};
     buffer.resize(DISCOVERY_RESPONSE_MAX_SIZE + 1 /* to detect oversized packets */);
@@ -103,8 +104,8 @@ broadcast_discovery_request(const uint32_t num_attempts, const uint32_t delay_be
                 if (!discovered_receivers.contains(receiver_uid)) {
                     // Add a new receiver to the list.
                     std::string share_name {discovery_response_data + 4, share_name_size};
-                    DiscoveredReceiver receiver {.addr = discovery_response_addr.sin_addr.s_addr, //
-                                                 .port = discovered_port,                         //
+                    DiscoveredReceiver receiver {.addr = discovery_response_addr.sin_addr, //
+                                                 .port = discovered_port,                  //
                                                  .name = std::move(share_name)};
                     discovered_receivers.emplace(receiver_uid, receiver);
 

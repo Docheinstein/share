@@ -9,7 +9,7 @@
 #include "net.h"
 
 struct DiscoveredReceiver {
-    in_addr_t addr;
+    in_addr addr;
     in_port_t port;
     std::string name;
 };

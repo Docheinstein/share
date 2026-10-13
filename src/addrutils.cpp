@@ -5,14 +5,14 @@
 #include <cstdio>
 #include <cstdlib>
 
-in_addr_t str_to_addr(const std::string& addr_str) {
+in_addr str_to_addr(const std::string& addr_str) {
     in_addr addr {};
     if (!inet_pton(AF_INET, addr_str.c_str(), &addr)) {
         perror("inet_pton");
         exit(1);
     }
 
-    return addr.s_addr;
+    return addr;
 }
 
 in_port_t str_to_port(const std::string& port_str) {
@@ -35,12 +35,6 @@ std::string addr_to_str(const in_addr addr) {
     }
 
     return addr_str;
-}
-
-std::string addr_to_str(const in_addr_t addr) {
-    in_addr in {};
-    in.s_addr = addr;
-    return addr_to_str(in);
 }
 
 std::string port_to_str(const in_port_t port) {

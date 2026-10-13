@@ -83,22 +83,28 @@ socket_t socket_create_tcp() {
     return s;
 }
 
-sockaddr_in socket_create_addr(in_addr_t addr, in_port_t port) {
+sockaddr_in socket_create_sockaddr(const in_addr addr, const in_port_t port) {
     sockaddr_in socket_addr {};
     socket_addr.sin_family = AF_INET;
-    socket_addr.sin_addr.s_addr = addr;
+    socket_addr.sin_addr = addr;
     socket_addr.sin_port = port;
     return socket_addr;
 }
 
-void socket_set_option(socket_t socket, int opt, int value) {
-    if (setsockopt(socket, SOL_SOCKET, opt, &value, sizeof(value)) < 0) {
+in_addr socket_create_addr(const in_addr_t a) {
+    in_addr addr {};
+    addr.s_addr = a;
+    return addr;
+}
+
+void socket_set_option(const socket_t socket, const int opt, const int value) {
+    if (setsockopt(socket, SOL_SOCKET, opt, reinterpret_cast<const char*>(&value), sizeof(value)) < 0) {
         socket_perror("setsockopt");
         exit(1);
     }
 }
 
-void socket_set_reuse_addr_exclusive(socket_t socket) {
+void socket_set_reuse_addr_exclusive(const socket_t socket) {
     // Allow a quick restart on the same port, but never bind it twice.
 #ifdef _WIN32
     // On Windows SO_REUSEADDR would let two sockets bind the same port,
@@ -109,51 +115,51 @@ void socket_set_reuse_addr_exclusive(socket_t socket) {
 #endif
 }
 
-void socket_connect(socket_t socket, sockaddr_in socket_addr) {
+void socket_connect(const socket_t socket, sockaddr_in socket_addr) {
     if (connect(socket, reinterpret_cast<sockaddr*>(&socket_addr), sizeof(socket_addr)) < 0) {
         socket_perror("connect");
         exit(1);
     }
 }
 
-void socket_shutdown(socket_t socket, int how) {
+void socket_shutdown(const socket_t socket, const int how) {
     if (shutdown(socket, how) < 0) {
         socket_perror("shutdown");
         exit(1);
     }
 }
 
-void socket_shutdown_read(socket_t socket) {
+void socket_shutdown_read(const socket_t socket) {
     socket_shutdown(socket, SHUT_RD);
 }
 
-void socket_shutdown_write(socket_t socket, int how) {
+void socket_shutdown_write(const socket_t socket, const int how) {
     socket_shutdown(socket, SHUT_WR);
 }
 
-void socket_shutdown_read_write(socket_t socket, int how) {
+void socket_shutdown_read_write(const socket_t socket, const int how) {
     socket_shutdown(socket, SHUT_RDWR);
 }
 
-void socket_bind(socket_t socket, sockaddr_in socket_addr) {
+void socket_bind(const socket_t socket, sockaddr_in socket_addr) {
     if (bind(socket, reinterpret_cast<sockaddr*>(&socket_addr), sizeof(socket_addr)) < 0) {
         socket_perror("bind");
         exit(1);
     }
 }
 
-bool socket_try_bind(socket_t socket, sockaddr_in socket_addr) {
+bool socket_try_bind(const socket_t socket, sockaddr_in socket_addr) {
     return bind(socket, reinterpret_cast<sockaddr*>(&socket_addr), sizeof(socket_addr)) == 0;
 }
 
-void socket_listen(socket_t socket, int max_connections) {
+void socket_listen(const socket_t socket, const int max_connections) {
     if (listen(socket, max_connections) < 0) {
         socket_perror("listen");
         exit(1);
     }
 }
 
-socket_t socket_accept(socket_t socket, sockaddr_in* from_out) {
+socket_t socket_accept(const socket_t socket, sockaddr_in* from_out) {
     sockaddr_in from {};
     socklen_t from_len = sizeof(from);
 
@@ -171,7 +177,7 @@ socket_t socket_accept(socket_t socket, sockaddr_in* from_out) {
     return in_tcp_sock;
 }
 
-int socket_poll(pollfd* fds, nfds_t num_fds, int timeout) {
+int socket_poll(pollfd* fds, const nfds_t num_fds, const int timeout) {
     int num_events = poll_sockets(fds, num_fds, timeout);
     if (num_events < 0) {
         socket_perror("poll");
@@ -181,9 +187,10 @@ int socket_poll(pollfd* fds, nfds_t num_fds, int timeout) {
     return num_events;
 }
 
-size_t socket_send_from(socket_t source_socket, const void* data, size_t size, const sockaddr_in* target_socket_addr) {
-    const auto ret = sendto(source_socket, data, size, 0, reinterpret_cast<const sockaddr*>(target_socket_addr),
-                            sizeof(sockaddr_in));
+size_t socket_send_from(const socket_t source_socket, const void* const data, const size_t size,
+                        const sockaddr_in* const target_socket_addr) {
+    const auto ret = sendto(source_socket, static_cast<const char*>(data), size, 0,
+                            reinterpret_cast<const sockaddr*>(target_socket_addr), sizeof(sockaddr_in));
 
     if (ret < 0) {
         socket_perror("sendto");
@@ -193,8 +200,8 @@ size_t socket_send_from(socket_t source_socket, const void* data, size_t size, c
     return ret;
 }
 
-size_t socket_send(socket_t source_socket, const void* data, size_t size) {
-    const auto ret = send(source_socket, data, size, 0);
+size_t socket_send(const socket_t source_socket, const void* const data, const size_t size) {
+    const auto ret = send(source_socket, static_cast<const char*>(data), size, 0);
 
     if (ret < 0) {
         socket_perror("send");
@@ -204,10 +211,11 @@ size_t socket_send(socket_t source_socket, const void* data, size_t size) {
     return ret;
 }
 
-size_t socket_recv_from(socket_t source_socket, void* data, size_t size, sockaddr_in* from_socket_addr) {
+size_t socket_recv_from(const socket_t source_socket, void* const data, const size_t size,
+                        sockaddr_in* from_socket_addr) {
     socklen_t from_socket_addr_size = sizeof(sockaddr_in);
-    const auto ret =
-        recvfrom(source_socket, data, size, 0, reinterpret_cast<sockaddr*>(from_socket_addr), &from_socket_addr_size);
+    const auto ret = recvfrom(source_socket, static_cast<char*>(data), size, 0,
+                              reinterpret_cast<sockaddr*>(from_socket_addr), &from_socket_addr_size);
     if (ret < 0) {
         if (is_truncated_datagram_error()) {
             return size;
@@ -220,8 +228,8 @@ size_t socket_recv_from(socket_t source_socket, void* data, size_t size, sockadd
     return ret;
 }
 
-size_t socket_recv(socket_t source_socket, void* data, size_t size) {
-    const auto ret = recv(source_socket, data, size, 0);
+size_t socket_recv(const socket_t source_socket, void* const data, const size_t size) {
+    const auto ret = recv(source_socket, static_cast<char*>(data), size, 0);
     if (ret < 0) {
         socket_perror("recv");
         exit(1);
@@ -230,7 +238,7 @@ size_t socket_recv(socket_t source_socket, void* data, size_t size) {
     return ret;
 }
 
-bool socket_recv_all(socket_t source_socket, void* data, size_t size) {
+bool socket_recv_all(const socket_t source_socket, void* const data, const size_t size) {
     size_t read = 0;
     while (read < size) {
         size_t read_result = socket_recv(source_socket, static_cast<char*>(data) + read, size - read);
@@ -242,12 +250,12 @@ bool socket_recv_all(socket_t source_socket, void* data, size_t size) {
     return true;
 }
 
-bool socket_wait_until(socket_t socket, int timeout_ms) {
+bool socket_wait_until(const socket_t socket, const int timeout_ms) {
     pollfd fds {socket, POLLIN, 0};
     return poll_sockets(&fds, 1, timeout_ms) > 0;
 }
 
-void socket_close(socket_t socket) {
+void socket_close(const socket_t socket) {
 #ifdef _WIN32
     closesocket(socket);
 #else

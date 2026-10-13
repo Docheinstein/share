@@ -112,10 +112,10 @@ void send_path(const socket_t socket, const std::filesystem::path& path) {
     }
 }
 
-void send_paths(const in_addr_t address, const in_port_t port, const std::vector<std::filesystem::path>& paths) {
+void send_paths(const in_addr address, const in_port_t port, const std::vector<std::filesystem::path>& paths) {
     // Create TCP socket.
     const socket_t tcp_socket = socket_create_tcp();
-    const sockaddr_in tcp_socket_addr = socket_create_addr(address, port);
+    const sockaddr_in tcp_socket_addr = socket_create_sockaddr(address, port);
     socket_connect(tcp_socket, tcp_socket_addr);
 
     for (const auto& path : paths) {
@@ -138,7 +138,7 @@ void send_paths(const in_addr_t address, const in_port_t port, const std::vector
     socket_close(tcp_socket);
 }
 
-std::pair<in_addr_t, in_port_t> resolver_receiver_identifier(const std::string& receiver_identifier) {
+std::pair<in_addr, in_port_t> resolver_receiver_identifier(const std::string& receiver_identifier) {
     const size_t at = receiver_identifier.find('@');
     if (at != std::string::npos) {
         // Receiver identifier is supposed to be: <name>@<address:ip>.
@@ -159,7 +159,7 @@ std::pair<in_addr_t, in_port_t> resolver_receiver_identifier(const std::string& 
 
     // A discover request is needed to resolver the receiver identifier.
     bool discovery_success = false;
-    std::pair<in_addr_t, in_port_t> addr_and_port {};
+    std::pair<in_addr, in_port_t> addr_and_port {};
 
     broadcast_discovery_request(
         DISCOVERY_REQUEST_NUM_ATTEMPTS, DISCOVERY_REQUESTS_DELAY,

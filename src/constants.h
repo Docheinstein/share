@@ -1,9 +1,9 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include "net.h"
 #include <cstddef>
 #include <cstdint>
-#include <netinet/in.h>
 
 constexpr int SHARE_UDP_PORT = 47000;
 constexpr int SHARE_TCP_MIN_PORT = 47001;

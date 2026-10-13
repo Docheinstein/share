@@ -2,14 +2,17 @@
 #define SOCKUTILS_H
 
 #include <cstddef>
+#ifndef _WIN32
 #include <poll.h>
+#endif
 
 #include "net.h"
 
 socket_t socket_create_udp();
 socket_t socket_create_tcp();
 
-sockaddr_in socket_create_addr(in_addr_t addr, in_port_t port);
+sockaddr_in socket_create_sockaddr(in_addr addr, in_port_t port);
+in_addr socket_create_addr(in_addr_t);
 
 void socket_set_option(socket_t socket, int opt, int value);
 void socket_set_reuse_addr_exclusive(socket_t socket);
