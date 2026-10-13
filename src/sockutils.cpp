@@ -110,7 +110,7 @@ int socket_poll(pollfd* fds, nfds_t num_fds, int timeout) {
     return num_events;
 }
 
-ssize_t socket_send_from(int source_socket, const void* data, size_t size, const sockaddr_in* target_socket_addr) {
+size_t socket_send_from(int source_socket, const void* data, size_t size, const sockaddr_in* target_socket_addr) {
     ssize_t ret = sendto(source_socket, data, size, 0, reinterpret_cast<const sockaddr*>(target_socket_addr),
                          sizeof(sockaddr_in));
 
@@ -122,7 +122,7 @@ ssize_t socket_send_from(int source_socket, const void* data, size_t size, const
     return ret;
 }
 
-ssize_t socket_send(int source_socket, const void* data, size_t size) {
+size_t socket_send(int source_socket, const void* data, size_t size) {
     ssize_t ret = send(source_socket, data, size, 0);
 
     if (ret < 0) {
@@ -133,7 +133,7 @@ ssize_t socket_send(int source_socket, const void* data, size_t size) {
     return ret;
 }
 
-ssize_t socket_recv_from(int source_socket, void* data, size_t size, sockaddr_in* from_socket_addr) {
+size_t socket_recv_from(int source_socket, void* data, size_t size, sockaddr_in* from_socket_addr) {
     socklen_t from_socket_addr_size = sizeof(sockaddr_in);
     const ssize_t ret =
         recvfrom(source_socket, data, size, 0, reinterpret_cast<sockaddr*>(from_socket_addr), &from_socket_addr_size);
@@ -145,7 +145,7 @@ ssize_t socket_recv_from(int source_socket, void* data, size_t size, sockaddr_in
     return ret;
 }
 
-ssize_t socket_recv(int source_socket, void* data, size_t size) {
+size_t socket_recv(int source_socket, void* data, size_t size) {
     ssize_t ret = recv(source_socket, data, size, 0);
     if (ret < 0) {
         perror("recv");
@@ -156,9 +156,9 @@ ssize_t socket_recv(int source_socket, void* data, size_t size) {
 }
 
 bool socket_recv_all(int source_socket, void* data, size_t size) {
-    ssize_t read = 0;
+    size_t read = 0;
     while (read < size) {
-        ssize_t read_result = socket_recv(source_socket, static_cast<char*>(data) + read, size - read);
+        size_t read_result = socket_recv(source_socket, static_cast<char*>(data) + read, size - read);
         if (read_result == 0) {
             return false;
         }

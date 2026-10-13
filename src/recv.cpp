@@ -19,8 +19,9 @@
 #include "sockutils.h"
 
 namespace {
-bool is_discovery_request(const void* const data) {
-    return memcmp(data, DISCOVERY_REQUEST_DATA, sizeof(DISCOVERY_REQUEST_DATA)) == 0;
+bool is_valid_discovery_request(const void* const data, const size_t size) {
+    return size == sizeof(DISCOVERY_REQUEST_DATA) &&
+           memcmp(data, DISCOVERY_REQUEST_DATA, sizeof(DISCOVERY_REQUEST_DATA)) == 0;
 }
 } // namespace
 
@@ -78,29 +79,33 @@ void command_recv(int argc, char** argv) {
             sockaddr_in discovery_sender_addr {};
 
             std::vector<char> buffer {};
-            buffer.resize(DISCOVERY_REQUEST_SIZE);
+            buffer.resize(DISCOVERY_REQUEST_SIZE + 1 /* to detect oversized packets */);
 
-            socket_recv_from(udp_socket, buffer.data(), buffer.size(), &discovery_sender_addr);
+            const size_t discovery_request_size =
+                socket_recv_from(udp_socket, buffer.data(), buffer.size(), &discovery_sender_addr);
 
-            if (is_discovery_request(buffer.data())) {
+            if (is_valid_discovery_request(buffer.data(), discovery_request_size)) {
                 // Valid discovery request, respond with the used TCP port and the share name.
                 /*
                  * Scheme of the discovery response.
-                 * +-------------------------------------------------------------------+
-                 * |  2 bytes        |  2 bytes           |  <share_name_size> bytes   |
-                 * |  <tcp_port>     |  <share_name_size> |  <share_name>              |
-                 * +-------------------------------------------------------------------+
+                 * +--------------------------------------------------------------------------------+
+                 * |  8 bytes   |  2 bytes        |  2 bytes           |  <share_name_size> bytes   |
+                 * |  <magic>   |  <tcp_port>     |  <share_name_size> |  <share_name>              |
+                 * +--------------------------------------------------------------------------------+
                  */
 
                 std::vector<char> discovery_response {};
-                discovery_response.resize(4 + share_name.size());
+                discovery_response.resize(DISCOVERY_RESPONSE_HEADER_SIZE + share_name.size());
 
                 const in_port_t tcp_port_network_order = htons(tcp_port);
                 const uint16_t share_name_size_network_order = htons(share_name.size());
 
-                memcpy(discovery_response.data(), &tcp_port_network_order, 2);
-                memcpy(discovery_response.data() + 2, &share_name_size_network_order, 2);
-                memcpy(discovery_response.data() + 4, share_name.c_str(), share_name.size());
+                char* const discovery_response_data = discovery_response.data() + DISCOVERY_RESPONSE_MAGIC_SIZE;
+
+                memcpy(discovery_response.data(), DISCOVERY_RESPONSE_MAGIC, DISCOVERY_RESPONSE_MAGIC_SIZE);
+                memcpy(discovery_response_data, &tcp_port_network_order, 2);
+                memcpy(discovery_response_data + 2, &share_name_size_network_order, 2);
+                memcpy(discovery_response_data + 4, share_name.c_str(), share_name.size());
 
                 socket_send_from(udp_socket, discovery_response.data(), discovery_response.size(),
                                  &discovery_sender_addr);

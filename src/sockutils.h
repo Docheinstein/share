@@ -28,11 +28,11 @@ int socket_accept(int socket, sockaddr_in* from_out = nullptr);
 
 int socket_poll(pollfd* fds, nfds_t num_fds, int timeout = -1 /* none */);
 
-ssize_t socket_send_from(int source_socket, const void* data, size_t size, const sockaddr_in* target_socket_addr);
-ssize_t socket_send(int source_socket, const void* data, size_t size);
+size_t socket_send_from(int source_socket, const void* data, size_t size, const sockaddr_in* target_socket_addr);
+size_t socket_send(int source_socket, const void* data, size_t size);
 
-ssize_t socket_recv_from(int source_socket, void* data, size_t size, sockaddr_in* from_socket_addr);
-ssize_t socket_recv(int source_socket, void* data, size_t size);
+size_t socket_recv_from(int source_socket, void* data, size_t size, sockaddr_in* from_socket_addr);
+size_t socket_recv(int source_socket, void* data, size_t size);
 bool socket_recv_all(int source_socket, void* data, size_t size);
 
 bool socket_wait_until(int socket, int timeout_ms);
